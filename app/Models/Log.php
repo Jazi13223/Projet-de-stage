@@ -9,6 +9,9 @@ class Log extends Model
      protected $fillable = [
         'user_id',
         'action',
+        'secretary_id',
+        'admin_id',
+        'student_id',
         'description',
     ];
 
@@ -18,5 +21,10 @@ class Log extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function secretary()
+    {
+    return $this->belongsTo(Secretary::class);
     }
 }

@@ -6,6 +6,8 @@ use App\Models\Note;
 use App\Models\Secretary;
 use App\Models\Reclamation;
 use App\Models\Ue;
+use App\Models\EcueResult;
+use App\Models\UeResult;
 use App\Models\Inscription;
 use App\Models\Year;
 use App\Models\Semester;
@@ -14,6 +16,7 @@ use App\Models\Ecue;
 use App\Models\Filiere;
 use App\Models\UeAssignment;
 use App\Models\User;
+use App\Models\Log;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -27,77 +30,24 @@ class SecretaireController extends Controller
     // Tableau de bord du secrétaire
     public function dashboard()
     {
-        return view('secretaire.dashboard');
-    }
-public function manageNotes(Request $request)
-{
-    $matricule = $request->query('matricule');
+        // Récupérer les statistiques
+        $totalEtudiants = Inscription::count(); // Nombre total d'étudiants
+        $reclamationsEnAttente = Reclamation::where('status', 'en attente')->count(); // Nombre de réclamations en attente
 
-    if ($matricule) {
-        // Récupération de l'étudiant par matricule
-        $etudiant = Student::where('matricule', $matricule)->with('user')->first();
+        // Moyennes par UE
+        $ues = UeResult::with('ue')->get(); // Récupère les résultats pour chaque UE
 
-        if (!$etudiant) {
-            return view('secretaire.note')->with('error', 'Aucun étudiant trouvé.');
-        }
-
-        // Dernière inscription (avec filière)
-        $inscription = $etudiant->inscriptions()->with('filiere')->latest()->first();
-
-        if (!$inscription || !$inscription->filiere) {
-            return view('secretaire.note')->with('error', 'Aucune inscription trouvée pour cet étudiant.');
-        }
-
-        $filiere = $inscription->filiere;
-
-        // Récupérer les UE de la filière via les affectations, et charger leurs ECUE
-        $ueAssignments = $filiere->ue_assignments()->with('ue.ecues')->get();
-         
-        // Extraire les UE de ces affectations
-        $ues = $ueAssignments->map(function ($assignment) {
-            return $assignment->ue;
-        })->filter(); // supprime les UE nulles si jamais
-        
-        // Si aucune UE n'est trouvée, retourner un message d'erreur
-        if ($ues->isEmpty()) {
-            return view('secretaire.note')->with([
-                'etudiant' => $etudiant,
-                'ues' => [],
-                'notesMap' => [],
-                'error' => 'Aucune UE liée à cette filière.'
-            ]);
-        }
-
-        // Récupérer toutes les notes de cette inscription
-        $notes = $inscription->notes()->with(['ecue', 'ue'])->get();
-
-        // Organiser les notes sous forme de map : [ecue_id][type] => note
-        $notesMap = [];
-        foreach ($notes as $note) {
-            $ecueId = $note->ecue_id ?? 'none'; // valeur "none" si pas d’ECUE
-            $type = $note->type;
-
-            if ($type) {
-                if (!isset($notesMap[$ecueId])) {
-                    $notesMap[$ecueId] = [];
-                }
-                $notesMap[$ecueId][$type] = $note;
-            }
-        }
+        // Moyennes par ECUE
+        $ecues = EcueResult::with('ecue')->get(); // Récupère les résultats pour chaque ECUE
 
         // Passer les données à la vue
-        return view('secretaire.note', [
-            'etudiant' => $etudiant,
-            'notesMap' => $notesMap,
-            'ues' => $ues
+        return view('secretaire.dashboard', [
+            'totalEtudiants' => $totalEtudiants,
+            'reclamationsEnAttente' => $reclamationsEnAttente,
+            'ues' => $ues,
+            'ecues' => $ecues,
         ]);
     }
-    
-    // Cas où aucun matricule n’est encore fourni (chargement initial)
-    return view('secretaire.note');
-}
-
-
 
 
     // Gérer les réclamations
@@ -132,7 +82,7 @@ public function manageNotes(Request $request)
             'statut' => $reclamation->statut,
         ];
     }
-
+     $this->createNotification('Le secrétaire a consulté les réclamations', 'info');
     return view('secretaire.manage-reclamation', [
         'reclamations' => $data
     ]);
@@ -214,6 +164,8 @@ public function manageNotes(Request $request)
             ]);
         }
 
+    $this->logAction('ajout_ue', 'Le secrétaire a ajouté une UE nommée "' . $request->ue_name . '"');
+     $this->createNotification('Une nouvelle UE a été ajoutée : ' . $request->ue_name, 'success');
         DB::commit();
         return redirect()->route('secretaire.ues')->with('success', 'UE ajoutée avec succès' . ($ecue1Rempli ? ' avec 2 ECUE.' : '.'));
     } catch (\Exception $e) {
@@ -233,7 +185,8 @@ public function manageNotes(Request $request)
         $ue->name = $request->name;
         $ue->coefficient = $request->coefficient;
         $ue->save();
-
+        $this->logAction('modification_ue', 'Le secrétaire a modifié l\'UE : ' . $ue->name);
+         $this->createNotification('L\'UE a été mise à jour : ' . $ue->name, 'success');
         return back()->with('success', 'UE mise à jour avec succès.');
     }
 
@@ -248,7 +201,8 @@ public function manageNotes(Request $request)
         $ecue->name = $request->name;
         $ecue->coefficient = $request->coefficient;
         $ecue->save();
-
+        $this->logAction('modification_ecue', 'Le secrétaire a modifié l\'ECUE : ' . $ecue->name);
+        $this->createNotification('L\'ECUE a été mise à jour : ' . $ecue->name, 'success');
         return back()->with('success', 'ECUE mis à jour avec succès.');
     }
 
@@ -316,7 +270,8 @@ public function manageNotes(Request $request)
         'semester_id' => $request->semester_id,
         'date_inscription' => now(),
     ]);
-
+    $this->logAction('ajout_etudiant', 'Le secrétaire a ajouté l\'étudiant : ' . $user->name);
+     $this->createNotification('Le secrétaire a ajouté un étudiant : ' . $user->name, 'success');
     return redirect()->route('secretaire.gerer-etudiant')->with('success', 'Étudiant ajouté avec succès.');
 }
 
@@ -344,7 +299,8 @@ public function manageNotes(Request $request)
     }
 
     $student->save();
-
+    $this->logAction('modification_etudiant', 'Le secrétaire a modifié l\'étudiant : ' . $student->matricule);
+     $this->createNotification('Le secrétaire a modifié l\'étudiant : ' . $student->matricule, 'success');
     // Rediriger avec message de succès
     return redirect()->route('secretaire.gerer-etudiant')->with('success', 'Étudiant modifié avec succès');
 }
@@ -393,6 +349,8 @@ public function manageNotes(Request $request)
 
     // Sauvegarde des informations mises à jour
     $user->save();
+    $this->logAction('modification_profil', 'Le secrétaire a mis à jour son profil');
+    $this->createNotification('Le secrétaire a mis à jour son profil', 'success');
 
     return back()->with('success', 'Profil mis à jour avec succès.');
     }
@@ -439,8 +397,86 @@ public function updateReclamation(Request $request)
     $reclamation->reponse = $request->reponse;
     $reclamation->statut = $request->statut;
     $reclamation->save();
+    $this->logAction('traitement_reclamation', 'Le secrétaire a mis à jour la réclamation ID : ' . $reclamation->id);
+     $this->createNotification('Le secrétaire a mis à jour la réclamation ID : ' . $reclamation->id, 'info');
 
     return redirect()->route('secretaire.manage-reclamation')->with('success', 'Réclamation mise à jour avec succès.');
+}
+
+
+public function manageNotes(Request $request)
+{
+    $matricule = $request->query('matricule');
+
+    if ($matricule) {
+        // Récupération de l'étudiant par matricule
+        $etudiant = Student::where('matricule', $matricule)->with('user')->first();
+
+        if (!$etudiant) {
+            return view('secretaire.note')->with('error', 'Aucun étudiant trouvé.');
+        }
+
+        // Dernière inscription (avec filière)
+        $inscription = $etudiant->inscriptions()->with('filiere')->latest()->first();
+
+        if (!$inscription || !$inscription->filiere) {
+            return view('secretaire.note')->with('error', 'Aucune inscription trouvée pour cet étudiant.');
+        }
+
+        $filiere = $inscription->filiere;
+
+        // Récupérer les UE de la filière via les affectations, et charger leurs ECUE
+        $ueAssignments = $filiere->ue_assignments()->with('ue.ecues')->get();
+        
+        // Extraire les UE de ces affectations
+        $ues = $ueAssignments->map(function ($assignment) {
+            return $assignment->ue;
+        })->filter(); // supprime les UE nulles si jamais
+        
+        // Si aucune UE n'est trouvée, retourner un message d'erreur
+        if ($ues->isEmpty()) {
+            return view('secretaire.note')->with([
+                'etudiant' => $etudiant,
+                'ues' => [],
+                'notesMap' => [],
+                'error' => 'Aucune UE liée à cette filière.'
+            ]);
+        }
+
+        // Récupérer toutes les notes de cette inscription
+        $notes = $inscription->notes()->with(['ecue', 'ue'])->get();
+
+        // Organiser les notes sous forme de map : [ue_id][ecue_id] => notes
+        $notesMap = [];
+
+        foreach ($notes as $note) {
+            $ueId = $note->ue_id;
+            $ecueId = $note->ecue_id ?? 'none'; // 'none' pour les UE sans ECUE
+            $type = $note->type;
+
+            if ($type) {
+                if (!isset($notesMap[$ueId])) {
+                    $notesMap[$ueId] = [];
+                }
+
+                if (!isset($notesMap[$ueId][$ecueId])) {
+                    $notesMap[$ueId][$ecueId] = [];
+                }
+
+                $notesMap[$ueId][$ecueId][$type] = $note;
+            }
+        }
+
+        // Passer les données à la vue
+        return view('secretaire.note', [
+            'etudiant' => $etudiant,
+            'notesMap' => $notesMap,
+            'ues' => $ues
+        ]);
+    }
+
+    // Cas où aucun matricule n’est encore fourni (chargement initial)
+    return view('secretaire.note');
 }
 
 
@@ -498,10 +534,14 @@ public function ajouterNote(Request $request)
     $note->ue_id = $ue->id;
     $note->ecue_id = $ecue ? $ecue->id : null; // Gère le cas où ECUE est optionnel
     $note->save();
+    $this->logAction('ajout_note', 'Note ajoutée pour l\'étudiant ' . $etudiant->matricule . ', UE : ' . $ue->name);
+    $this->createNotification('Note ajoutée pour l\'étudiant ' . $etudiant->matricule . ', UE : ' . $ue->name, 'success');
 
     // Redirection avec message de succès
     return redirect()->route('secretaire.note')->with('success', 'Note ajoutée avec succès.');
 }
+
+
 
    public function modifierNote(Request $request, $id)
 {
@@ -529,7 +569,8 @@ public function ajouterNote(Request $request)
     }
 
     $note->save();
-
+    $this->logAction('modification_note', 'Note modifiée (ID: ' . $note->id . ')');
+    $this->createNotification('Note modifiée (ID: ' . $note->id . ')', 'success');
     return redirect()->route('secretaire.note')->with('success', 'Note modifiée avec succès.');
 }
 
@@ -544,7 +585,8 @@ public function deleteUe($id)
     }
 
     $ue->delete();
-
+    $this->logAction('suppression_ue', 'Le secrétaire a supprimé l\'UE : ' . $ue->name);
+     $this->createNotification('Le secrétaire a supprimé l\'UE : ' . $ue->name, 'danger');
     return redirect()->back()->with('success', 'UE supprimée avec succès.');
 }
 
@@ -552,6 +594,9 @@ public function deleteEcue($id)
 {
     $ecue = ECUE::findOrFail($id);
     $ecue->delete();
+    $this->logAction('suppression_ecue', 'Le secrétaire a supprimé l\'ECUE : ' . $ecue->name);
+     $this->createNotification('Le secrétaire a supprimé l\'ECUE : ' . $ecue->name, 'danger');
+
 
     return redirect()->back()->with('success', 'ECUE supprimée avec succès.');
 }

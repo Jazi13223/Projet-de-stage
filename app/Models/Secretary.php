@@ -8,6 +8,7 @@ class Secretary extends Model
 {
      protected $fillable = [
        'user_id',
+       'statut', // Actif ou Inactif
     
     ];
 
@@ -25,6 +26,18 @@ class Secretary extends Model
     public function ues(){
         return $this->hasMany(Ue::class);
     }
+
+    // Dans le modèle Secretary
+    public function logs()
+    {
+        return $this->hasMany(Log::class);
+    }
+
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
+    }
+
 
     
 }

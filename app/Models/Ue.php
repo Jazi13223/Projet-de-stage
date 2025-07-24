@@ -44,10 +44,17 @@ class Ue extends Model
         return $this->belongsTo(Secretary::class);
     }
 
+    public function admin() {
+        return $this->belongsTo(Admin::class);
+    }
+
     //Une ue peut avoir plusieurs ueAssignment
     public function ue_assignments(){
         return $this->hasMany(UeAssignment::class);
     }
-}
+
+
+
+    }
 
 

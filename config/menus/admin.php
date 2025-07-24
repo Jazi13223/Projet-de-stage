@@ -8,7 +8,7 @@ return [
             'icon' => 'fas fa-tachometer-alt',
         ],
         [
-            'text' => 'Gestion des utilisateurs',
+            'text' => 'Gestion des étudiants',
             'url'  => '/admin/users',
             'icon' => 'fas fa-users',
         ],
@@ -22,11 +22,7 @@ return [
             'url'  => '/admin/filiere',
             'icon' => 'fas fa-book',
         ],
-        [
-            'text' => 'Statistiques',
-            'url'  => '/admin/statistics',
-            'icon' => 'fas fa-chart-bar',
-        ],
+      
         [
             'text' => 'Profil',
             'url'  => '/admin/profil',

@@ -47,6 +47,11 @@
     <button class="btn btn-success" data-toggle="modal" data-target="#ajouterNoteModal">
         <i class="fas fa-plus-circle"></i> Ajouter une note manuellement
     </button>
+
+     <!-- Bouton Calculer la moyenne -->
+    <button class="btn btn-info ms-2" data-toggle="modal" data-target="#calculerMoyenneModal">
+        <i class="fas fa-calculator"></i> Calculer la moyenne
+    </button>
 </div>
 
 @isset($etudiant)
@@ -70,60 +75,62 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($ues as $ue)
-                        @if($ue->ecues->isNotEmpty())
-                            @foreach($ue->ecues as $ecue)
-                                @php
-                                    $ecueId = $ecue->id;
-                                    $noteSet = $notesMap[$ecueId] ?? [];
-                                @endphp
-                                <tr class="text-center align-middle">
-                                    <td>{{ $etudiant->user->name ?? '-' }}</td>
-                                    <td>{{ $ue->name }}</td>
-                                    <td>{{ $ecue->name }}</td>
-                                    <td>{{ $noteSet['interro']->value ?? '-' }}</td>
-                                    <td>{{ $noteSet['devoir']->value ?? '-' }}</td>
-                                    <td>{{ $noteSet['examen']->value ?? '-' }}</td>
-                                    <td>{{ $noteSet['projet']->value ?? '-' }}</td>
-                                    <td>
-                                        @foreach($noteSet as $type => $note)
-                                            <button class="btn btn-warning btn-sm mb-1" data-toggle="modal" data-target="#modifierNoteModal"
-                                                data-id="{{ $note->id }}"
-                                                data-ecue="{{ $ecue->name }}"
-                                                data-type="{{ $type }}"
-                                                data-note="{{ $note->value }}">
-                                                <i class="fas fa-edit"></i> {{ ucfirst($type) }}
-                                            </button><br>
-                                        @endforeach
-                                    </td>
-                                </tr>
-                            @endforeach
-                        @else
-                            @php
-                                $noteSet = $notesMap['none'] ?? [];
-                            @endphp
-                            <tr class="text-center align-middle">
-                                <td>{{ $etudiant->user->name ?? '-' }}</td>
-                                <td>{{ $ue->name }}</td>
-                                <td><em>Aucun ECUE</em></td>
-                                <td>{{ $noteSet['interro']->value ?? '-' }}</td>
-                                <td>{{ $noteSet['devoir']->value ?? '-' }}</td>
-                                <td>{{ $noteSet['examen']->value ?? '-' }}</td>
-                                <td>{{ $noteSet['projet']->value ?? '-' }}</td>
-                                <td>
-                                    @foreach($noteSet as $type => $note)
-                                        <button class="btn btn-warning btn-sm mb-1" data-toggle="modal" data-target="#modifierNoteModal"
-                                            data-id="{{ $note->id }}"
-                                            data-ecue="Aucun ECUE"
-                                            data-type="{{ $type }}"
-                                            data-note="{{ $note->value }}">
-                                            <i class="fas fa-edit"></i> {{ ucfirst($type) }}
-                                        </button><br>
-                                    @endforeach
-                                </td>
-                            </tr>
-                        @endif
+                  @foreach($ues as $ue)
+    @if($ue->ecues->isNotEmpty())
+        @foreach($ue->ecues as $ecue)
+            @php
+                $ecueId = $ecue->id;
+                $noteSet = $notesMap[$ue->id][$ecueId] ?? [];
+            @endphp
+            <tr class="text-center align-middle">
+                <td>{{ $etudiant->user->name ?? '-' }}</td>
+                <td>{{ $ue->name }}</td>
+                <td>{{ $ecue->name }}</td>
+                <td>{{ $noteSet['interro']->value ?? '-' }}</td>
+                <td>{{ $noteSet['devoir']->value ?? '-' }}</td>
+                <td>{{ $noteSet['examen']->value ?? '-' }}</td>
+                <td>{{ $noteSet['projet']->value ?? '-' }}</td>
+                <td>
+                    @foreach($noteSet as $type => $note)
+                        <button class="btn btn-warning btn-sm mb-1" data-toggle="modal" data-target="#modifierNoteModal"
+                            data-id="{{ $note->id }}"
+                            data-ecue="{{ $ecue->name }}"
+                            data-type="{{ $type }}"
+                            data-note="{{ $note->value }}">
+                            <i class="fas fa-edit"></i> {{ ucfirst($type) }}
+                        </button><br>
                     @endforeach
+                </td>
+            </tr>
+        @endforeach
+    @else
+        @php
+            // Si l'UE n'a pas d'ECUEs, on gère les notes de l'UE directement
+            $noteSet = $notesMap[$ue->id]['none'] ?? [];
+        @endphp
+        <tr class="text-center align-middle">
+            <td>{{ $etudiant->user->name ?? '-' }}</td>
+            <td>{{ $ue->name }}</td>
+            <td><em>Aucun ECUE</em></td>
+            <td>{{ $noteSet['interro']->value ?? '-' }}</td>
+            <td>{{ $noteSet['devoir']->value ?? '-' }}</td>
+            <td>{{ $noteSet['examen']->value ?? '-' }}</td>
+            <td>{{ $noteSet['projet']->value ?? '-' }}</td>
+            <td>
+                @foreach($noteSet as $type => $note)
+                    <button class="btn btn-warning btn-sm mb-1" data-toggle="modal" data-target="#modifierNoteModal"
+                        data-id="{{ $note->id }}"
+                        data-ecue="Aucun ECUE"
+                        data-type="{{ $type }}"
+                        data-note="{{ $note->value }}">
+                        <i class="fas fa-edit"></i> {{ ucfirst($type) }}
+                    </button><br>
+                @endforeach
+            </td>
+        </tr>
+    @endif
+@endforeach
+
                 </tbody>
             </table>
         </div>

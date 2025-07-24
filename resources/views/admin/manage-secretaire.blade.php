@@ -39,41 +39,46 @@
                     </tr>
                 </thead>
                 <tbody id="listeSecretaires">
-                    @php
-                        $secretaires = [
-                            ['id' => 1, 'nom' => 'Koffi M.', 'email' => 'koffi@example.com', 'statut' => 'Actif'],
-                            ['id' => 2, 'nom' => 'Amoussou L.', 'email' => 'amoussou@example.com', 'statut' => 'Inactif'],
-                            ['id' => 3, 'nom' => 'Houénou M.', 'email' => 'houenou@example.com', 'statut' => 'Actif'],
-                        ];
-                    @endphp
-
                     @foreach($secretaires as $sec)
-                        <tr data-statut="{{ $sec['statut'] }}">
-                            <td>{{ $sec['nom'] }}</td>
-                            <td>{{ $sec['email'] }}</td>
+                        <tr data-statut="{{ $sec->statut }}">
+                           <td>{{ $sec->user->name }}</td>
+                            <td>{{ $sec->user->email }}</td>
+
                             <td>
-                                <span class="badge bg-{{ $sec['statut'] === 'Actif' ? 'success' : 'secondary' }}">
-                                    {{ $sec['statut'] }}
+                                <span class="badge bg-{{ $sec->statut === 'Actif' ? 'success' : 'secondary' }}">
+                                    {{ $sec->statut }}
                                 </span>
                             </td>
                             <td class="text-center">
-                                <button class="btn btn-sm btn-info me-1"
-                                    data-toggle="modal"
-                                    data-target="#voirModal"
-                                    onclick="voirSecretaire('{{ $sec['nom'] }}', '{{ $sec['email'] }}', '{{ $sec['statut'] }}')">
-                                    <i class="fas fa-eye"></i>
-                                </button>
+                               
 
-                                <button class="btn btn-sm btn-warning me-1"
+                               <button class="btn btn-sm btn-warning me-1"
                                     data-toggle="modal"
                                     data-target="#modifierModal"
-                                    onclick="remplirFormulaire('{{ $sec['id'] }}', '{{ $sec['nom'] }}', '{{ $sec['email'] }}', '{{ $sec['statut'] }}')">
+                                    onclick="remplirFormulaire(
+                                        '{{ $sec->id }}',
+                                        '{{ addslashes($sec->user->name) }}',
+                                        '{{ addslashes($sec->user->email) }}',
+                                        '{{ $sec->statut }}'
+                                    )">
                                     <i class="fas fa-edit"></i>
                                 </button>
 
-                                <button class="btn btn-sm btn-danger">
-                                    <i class="fas fa-trash-alt"></i>
+
+                                <button class="btn btn-sm btn-secondary me-1"
+                                    data-toggle="modal"
+                                    data-target="#activitesModal"
+                                    onclick="chargerActivites({{ $sec->id }}, '{{ $sec->name }}')">
+                                    <i class="fas fa-list"></i> Voir Activités
                                 </button>
+
+                                <form action="{{ route('admin.secretaires.destroy', $sec->id) }}" method="POST" style="display: inline;">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button class="btn btn-sm btn-danger" type="submit">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </form>
                             </td>
                         </tr>
                     @endforeach
@@ -82,100 +87,58 @@
         </div>
     </div>
 
-    {{-- Historique des actions --}}
-    <div class="mt-4">
-        <div class="card">
-            <div class="card-header bg-secondary text-white">
-                <h3 class="card-title">Historique des Activités</h3>
-            </div>
-            <div class="card-body">
-                <ul class="list-group">
-                    <li class="list-group-item">Connexion de Koffi M. le 2025-06-25</li>
-                    <li class="list-group-item">Ajout d’un étudiant par Amoussou L. le 2025-06-24</li>
-                    <li class="list-group-item">Suppression d’une note par Houénou M. le 2025-06-23</li>
-                </ul>
-            </div>
-        </div>
-    </div>
+   
 
-    {{-- Notifications système --}}
-    <div class="mt-4">
-        <div class="card">
-            <div class="card-header bg-dark text-white">
-                <h3 class="card-title">Notifications Système</h3>
-            </div>
-            <div class="card-body">
-                <ul class="list-group">
-                    <li class="list-group-item text-warning">⚠️ Tentative d’accès non autorisé le 2025-06-24</li>
-                    <li class="list-group-item text-success">✅ Mise à jour réussie d’un étudiant</li>
-                    <li class="list-group-item text-danger">❌ Échec d’une suppression le 2025-06-22</li>
-                </ul>
-            </div>
-        </div>
-    </div>
+  
+   
 
-    {{-- Modal : Voir Secrétaire --}}
-    <div class="modal fade" id="voirModal" tabindex="-1" role="dialog" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header bg-info text-white">
-                    <h5 class="modal-title"><i class="fas fa-user"></i> Détails du Secrétaire</h5>
+   
+{{-- Modal : Modifier Secrétaire --}}
+<div class="modal fade" id="modifierModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{{ route('admin.secretaires.update') }}" method="POST">
+                @csrf
+                @method('PUT')
+                <div class="modal-header bg-warning text-white">
+                    <h5 class="modal-title"><i class="fas fa-edit"></i> Modifier Secrétaire</h5>
                     <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <p><strong>Nom :</strong> <span id="voir_nom"></span></p>
-                    <p><strong>Email :</strong> <span id="voir_email"></span></p>
-                    <p><strong>Statut :</strong> <span id="voir_statut"></span></p>
+                    <input type="hidden" id="edit_id" name="id">
+
+                    <div class="form-group">
+                        <label>Nom complet</label>
+                        <input type="text" class="form-control" id="edit_nom" name="name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" class="form-control" id="edit_email" name="email" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Statut</label>
+                        <select class="form-control" id="edit_statut" name="statut" required>
+                            <option value="Actif">Actif</option>
+                            <option value="Inactif">Inactif</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn btn-secondary" data-dismiss="modal">Fermer</button>
+                    <button class="btn btn-secondary" data-dismiss="modal">Annuler</button>
+                    <button class="btn btn-warning" type="submit">Enregistrer</button>
                 </div>
-            </div>
+            </form>
         </div>
     </div>
-
-    {{-- Modal : Modifier Secrétaire --}}
-    <div class="modal fade" id="modifierModal" tabindex="-1" role="dialog" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <form action="#" method="POST">
-                    @csrf
-                    <div class="modal-header bg-warning text-white">
-                        <h5 class="modal-title"><i class="fas fa-edit"></i> Modifier Secrétaire</h5>
-                        <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
-                    </div>
-                    <div class="modal-body">
-                        <input type="hidden" id="edit_id" name="id">
-                        <div class="form-group">
-                            <label>Nom complet</label>
-                            <input type="text" class="form-control" id="edit_nom" name="nom">
-                        </div>
-                        <div class="form-group">
-                            <label>Email</label>
-                            <input type="email" class="form-control" id="edit_email" name="email">
-                        </div>
-                        <div class="form-group">
-                            <label>Statut</label>
-                            <select class="form-control" id="edit_statut" name="statut">
-                                <option value="Actif">Actif</option>
-                                <option value="Inactif">Inactif</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button class="btn btn-secondary" data-dismiss="modal">Annuler</button>
-                        <button class="btn btn-warning" type="submit">Enregistrer</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
+</div>
 
     {{-- Modal : Ajouter Secrétaire --}}
     <div class="modal fade" id="ajouterModal" tabindex="-1" role="dialog" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
-                <form action="#" method="POST">
+                <form action="{{ route('admin.secretaires.store') }}" method="POST">
                     @csrf
                     <div class="modal-header bg-success text-white">
                         <h5 class="modal-title"><i class="fas fa-user-plus"></i> Ajouter un Secrétaire</h5>
@@ -184,7 +147,7 @@
                     <div class="modal-body">
                         <div class="form-group">
                             <label>Nom complet</label>
-                            <input type="text" class="form-control" name="nom" required>
+                            <input type="text" class="form-control" name="name" required>
                         </div>
                         <div class="form-group">
                             <label>Email</label>
@@ -211,6 +174,27 @@
         </div>
     </div>
 
+    {{-- Modal : Activités du secrétaire --}}
+<div class="modal fade" id="activitesModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-secondary text-white">
+                <h5 class="modal-title"><i class="fas fa-history"></i> Activités de <span id="activite_nom"></span></h5>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <ul id="liste_activites" class="list-group">
+                    {{-- Contenu chargé par AJAX --}}
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 @stop
 
 @section('js')
@@ -222,20 +206,52 @@
             row.style.display = (value === 'Tous' || row.dataset.statut === value) ? '' : 'none';
         });
     });
+function remplirFormulaire(id, nom, email, statut) {
+     console.log(">>> remplirFormulaire appelé avec : ", id, nom, email, statut);
 
-    // Voir les détails
-    function voirSecretaire(nom, email, statut) {
-        document.getElementById('voir_nom').textContent = nom;
-        document.getElementById('voir_email').textContent = email;
-        document.getElementById('voir_statut').textContent = statut;
-    }
+    document.getElementById('edit_id').value = id;
+    document.getElementById('edit_nom').value = nom;
+    document.getElementById('edit_email').value = email;
+    document.getElementById('edit_statut').value = statut;
+}
 
-    // Remplir le formulaire de modification
-    function remplirFormulaire(id, nom, email, statut) {
-        document.getElementById('edit_id').value = id;
-        document.getElementById('edit_nom').value = nom;
-        document.getElementById('edit_email').value = email;
-        document.getElementById('edit_statut').value = statut;
-    }
+
+    // Charger les activités du secrétaire
+    function chargerActivites(secretaryId, nom) {
+        document.getElementById('activite_nom').textContent = nom;
+        const liste = document.getElementById('liste_activites');
+        liste.innerHTML = `<li class="list-group-item">Chargement...</li>`;
+
+        function chargerActivites(secretaryId, nom) {
+    document.getElementById('activite_nom').textContent = nom;
+    const liste = document.getElementById('liste_activites');
+    liste.innerHTML = `<li class="list-group-item">Chargement...</li>`;
+
+    fetch(`/admin/secretaires/${secretaryId}/activites`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error("Erreur HTTP: " + response.status);
+            }
+            return response.json();
+        })
+        .then(data => {
+            liste.innerHTML = '';
+            if (data.length === 0) {
+                liste.innerHTML = `<li class="list-group-item">Aucune activité trouvée.</li>`;
+            } else {
+                data.forEach(log => {
+                    const li = document.createElement('li');
+                    li.className = 'list-group-item';
+                    li.innerHTML = `<strong>${log.action}</strong> - ${log.description} <br><small class="text-muted">${log.created_at}</small>`;
+                    liste.appendChild(li);
+                });
+            }
+        })
+        .catch(error => {
+            console.error("Erreur lors du fetch :", error);
+            liste.innerHTML = `<li class="list-group-item text-danger">Erreur lors du chargement des activités.</li>`;
+        });
+}
+
 </script>
 @stop

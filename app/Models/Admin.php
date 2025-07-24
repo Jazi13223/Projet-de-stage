@@ -13,4 +13,15 @@ class Admin extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function logs()
+{
+    return $this->hasMany(Log::class);
+}
+
+public function notifications()
+{
+    return $this->hasMany(Notification::class);
+}
+
 }

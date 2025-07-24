@@ -26,5 +26,23 @@ class Student extends Model
     return $this->hasOne(Inscription::class)->latestOfMany();
 }
 
+public function logs()
+{
+    return $this->hasMany(Log::class);
+}
+
+public function notifications()
+{
+    return $this->hasMany(Notification::class);
+}
+
+ // Définir la relation avec les filières via la table 'inscriptions'
+    public function filieres()
+    {
+        return $this->belongsToMany(Filiere::class, 'inscriptions', 'student_id', 'filiere_id');
+    }
+
+
+
 
 }

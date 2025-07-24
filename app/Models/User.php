@@ -64,4 +64,29 @@ class User extends Authenticatable
     return $this->hasOne(Admin::class);
     }
 
+    
+public function isAdmin()
+{
+    // Vérifie si l'utilisateur a le rôle d'admin (supposons que tu as une colonne 'role')
+    return $this->role === 'admin'; // Remplace 'admin' par la valeur correspondant à l'admin dans ta base de données
+}
+
+public function isSecretary()
+{
+    // Vérifie si l'utilisateur a le rôle de secrétaire
+    return $this->role === 'secretary'; // Remplace 'secretary' par la valeur correspondant à un secrétaire
+}
+
+public function notifications()
+{
+    return $this->hasMany(Notification::class);
+}
+
+    public function logs()
+    {
+        return $this->hasMany(Log::class);
+    }
+
+   
+
 }

@@ -7,6 +7,12 @@
 @stop
 
 @section('content')
+    @if(session('success'))
+        <div class="alert alert-success">{{ session('success') }}</div>
+    @elseif(session('error'))
+        <div class="alert alert-danger">{{ session('error') }}</div>
+    @endif
+
     <div class="card shadow">
         <div class="card-body">
             <div class="row">
@@ -20,15 +26,23 @@
 
                 <!-- Infos utilisateur -->
                 <div class="col-md-8">
-                    <form>
+                    <form method="POST" action="{{ route('profile.update') }}">
+                        @csrf
+                        @method('PUT')
                         <div class="form-group">
                             <label for="name">Nom</label>
-                            <input type="text" id="name" class="form-control" value="{{ Auth::user()->name }}" readonly>
+                            <input type="text" id="name" class="form-control @error('name') is-invalid @enderror" name="name" value="{{ old('name', Auth::user()->name) }}" required>
+                            @error('name')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
                         </div>
 
                         <div class="form-group">
                             <label for="email">Adresse Email</label>
-                            <input type="email" id="email" class="form-control" value="{{ Auth::user()->email }}" readonly>
+                            <input type="email" id="email" class="form-control @error('email') is-invalid @enderror" name="email" value="{{ old('email', Auth::user()->email) }}" required>
+                            @error('email')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
                         </div>
 
                         <div class="form-group">
@@ -60,8 +74,9 @@
     <!-- Modal : Modifier le profil -->
     <div class="modal fade" id="modifierProfilModal" tabindex="-1" role="dialog" aria-labelledby="modifierProfilModalLabel" aria-hidden="true">
         <div class="modal-dialog" role="document">
-            <form action="#" method="POST" class="modal-content">
+            <form action="{{ route('profile.update') }}" method="POST" class="modal-content">
                 @csrf
+                @method('PUT')
                 <div class="modal-header bg-warning text-white">
                     <h5 class="modal-title" id="modifierProfilModalLabel"><i class="fas fa-edit"></i> Modifier mon profil</h5>
                     <button type="button" class="close text-white" data-dismiss="modal" aria-label="Fermer">
@@ -72,29 +87,44 @@
                 <div class="modal-body">
                     <div class="form-group">
                         <label>Nom complet</label>
-                        <input type="text" name="name" class="form-control" value="{{ Auth::user()->name }}">
+                        <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name', Auth::user()->name) }}" required>
+                        @error('name')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
                     </div>
 
                     <div class="form-group">
                         <label>Adresse Email</label>
-                        <input type="email" name="email" class="form-control" value="{{ Auth::user()->email }}">
+                        <input type="email" name="email" class="form-control @error('email') is-invalid @enderror" value="{{ old('email', Auth::user()->email) }}" required>
+                        @error('email')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
                     </div>
 
                     <hr>
 
                     <div class="form-group">
                         <label>Mot de passe actuel</label>
-                        <input type="password" name="old_password" class="form-control">
+                        <input type="password" name="old_password" class="form-control @error('old_password') is-invalid @enderror">
+                        @error('old_password')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
                     </div>
 
                     <div class="form-group">
                         <label>Nouveau mot de passe</label>
-                        <input type="password" name="new_password" class="form-control">
+                        <input type="password" name="new_password" class="form-control @error('new_password') is-invalid @enderror">
+                        @error('new_password')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
                     </div>
 
                     <div class="form-group">
                         <label>Confirmer le nouveau mot de passe</label>
-                        <input type="password" name="confirm_password" class="form-control">
+                        <input type="password" name="confirm_password" class="form-control @error('confirm_password') is-invalid @enderror">
+                        @error('confirm_password')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
                     </div>
                 </div>
 

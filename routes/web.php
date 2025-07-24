@@ -52,15 +52,22 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::delete('/admin/users/{id}', [AdminController::class, 'deleteEtudiant'])->name('admin.etudiants.delete');
     Route::get('/admin/manage-secretaire', [AdminController::class, 'manageSecretaire'])->name('admin.manage-secretaire');
      Route::post('/admin/manage-secretaire', [AdminController::class, 'addSecretaire'])->name('admin.addSecretaire');
-     Route::delete('/admin/manage-secretaire/{id}', [AdminController::class, 'deleteSecretaire'])->name('admin.secretaires.delete');
-     Route::post('/admin/secretaires/update/{id}', [AdminController::class, 'updateSecretaire'])->name('admin.updateSecretaire');
+    Route::delete('/admin/manage-secretaire/{id}', [AdminController::class, 'destroy'])->name('admin.secretaires.destroy');
+    Route::post('/admin/secretaires', [AdminController::class, 'storeSecretaire'])->name('admin.secretaires.store');
+    Route::put('/admin/secretaires', [AdminController::class, 'updateSecretaire'])->name('admin.secretaires.update');
+    Route::get('/admin/secretaires/{id}/activites', [AdminController::class, 'getSecretaireLogs']);
+     
+    Route::post('/admin/secretaires/update/{id}', [AdminController::class, 'updateSecretaire'])->name('admin.updateSecretaire');
     Route::get('/admin/filiere', [AdminController::class, 'manageFilieres'])->name('admin.filiere');
      Route::post('admin/filiere', [AdminController::class, 'storeFiliere'])->name('admin.filieres.store');
     Route::put('admin/filiere/update', [AdminController::class, 'updateFiliere'])->name('admin.filieres.update');
     Route::delete('admin/filieres/{id}', [AdminController::class, 'destroyFiliere'])->name('admin.filieres.destroy');
+    Route::delete('admin/ues/{id}', [AdminController::class, 'destroy'])->name('admin.ues.destroy');
+
     Route::post('/filieres/{id}/assign-ue', [AdminController::class, 'assignUeToFiliere'])->name('admin.filieres.assignUe');
     Route::get('/admin/statistics', [AdminController::class, 'statistics'])->name('admin.statistics');
      Route::get('/admin/profil', [AdminController::class, 'profil'])->name('admin.profil');
+      Route::put('admin/profil', [AdminController::class, 'update'])->name('profile.update');
 });
 
 // Routes pour le secrétaire
@@ -68,6 +75,8 @@ Route::middleware(['auth', 'secretaire'])->group(function () {
     Route::get('/secretaire/dashboard', [SecretaireController::class, 'dashboard'])->name('secretaire.dashboard');
     Route::get('/secretaire/note', [SecretaireController::class, 'manageNotes'])->name('secretaire.note');
     Route::post('/secretaire/note', [SecretaireController::class, 'ajouterNote'])->name('secretaire.ajouterNote');
+    Route::delete('secretaire/supprimer-note/{id}', [SecretaireController::class, 'supprimerNote'])->name('secretaire.supprimerNote');
+
     Route::put('/secretaire/modifier-note/{id}', [SecretaireController::class, 'modifierNote'])->name('secretaire.modifierNote');
 
     Route::get('/secretaire/manage-reclamation', [SecretaireController::class, 'manageReclamations'])->name('secretaire.manage-reclamation');
